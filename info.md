@@ -203,7 +203,40 @@ export class UserProfileComponent {
     <div *appShowOnScreenSize = "'small'">Contenido parara pantallas pequeñas</div>
  -->
 
+<!-- DEV:COMMENT -> Directiva de atributo -->
+<!-- siver para crear funcionalidades extras y para agregarlo en lugares en los que nosotros lo necesitemos, repetidas veces 
+    Tambien sirve para la reusabilidad
+-->
+<!--
+@Directive({
+  standalone:true,
+  <!-- hacer un Highlight sobre algo -->
+  selector:"[appHighlight]"
+<!-- }) -->
+export class HighLightDirective {
+  <!-- voy a pararme sobre el elemento sobre el cual estoy aplicando la directiva, ya qu es un atributo de una directiva pero de un elemento y aqi se accede a ese elemento "private el: ElemenRef"
+  - renderer es la forma correcta de renderizar algo cosas a mano en angular d la forma correcta
+  - Sin renderen tratan de injectar cosas con html, el problema hay que hacer demasiadas cosas
+  -->
+  constructor(private el: ElemenRef, private renderer: Renderer2){ }
 
+  <!-- decorador de metodos, y va a llamarse y escuchar cuando entre el mouse en un elmento -->
+  <!-- aqui agrego un stilo -->
+  @HostListener("mouseenter") onMouseEnter(){
+    <!-- agarramos el elemento nativo nos paramos sosbre su elemento nativo ejemplo: booton y cambiamos el style -->
+    <!-- ahora cuando nos paremos sobre un elemento con el mouse, automaticamente    se va  aponer el background de amarrillo -->
+    this.renderer.setStyle(this.el.nativeElement, "background-color", "yellow");
+  }
+
+<!-- Pdemos hacer un spam si tenemos un elmento span le podemos poner un upperCase podemos hacer que si se le agregas esa directiva a ese elemento spam sutomaticamente es uppercase-->
+<!-- Aqui le saco el estilo -->
+  @HostListener("mouseleave") onMouseLeave(){
+    this.renderer.removeStyle(this.el.nativeElement, "background-color");
+  }
+}
+
+<!-- <p appHighlight>Pasa el mouse sobre este texto para resaltar su contenido</p> -->
+-->
 
 
 ------------ Git
