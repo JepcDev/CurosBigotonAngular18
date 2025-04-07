@@ -207,12 +207,12 @@ export class UserProfileComponent {
 <!-- siver para crear funcionalidades extras y para agregarlo en lugares en los que nosotros lo necesitemos, repetidas veces 
     Tambien sirve para la reusabilidad
 -->
-<!--
+```typeScript
 @Directive({
   standalone:true,
   <!-- hacer un Highlight sobre algo -->
   selector:"[appHighlight]"
-<!-- }) -->
+})
 export class HighLightDirective {
   <!-- voy a pararme sobre el elemento sobre el cual estoy aplicando la directiva, ya qu es un atributo de una directiva pero de un elemento y aqi se accede a ese elemento "private el: ElemenRef"
   - renderer es la forma correcta de renderizar algo cosas a mano en angular d la forma correcta
@@ -235,8 +235,243 @@ export class HighLightDirective {
   }
 }
 
-<!-- <p appHighlight>Pasa el mouse sobre este texto para resaltar su contenido</p> -->
+<!--
+No le estoy pasando nada y tampoco estoy cambiando el DOM
+<p appHighlight>Pasa el mouse sobre este texto para resaltar su contenido</p> -->
+```
+
+<!-- DEV:COMMENT -> Services -->
+## Services
+- Se utilizar para la logica de negocios// segun es segun el tipo se logica y muchas cosan, architecture
+  // Podrias hacer la logica de negocio afuera en un archivo externo no precisamente necesario qie este en un servicio, pero eso dependera de lo que querramos hacer nosotros
+- Se usa para conectarse con entidades(servicios, servidores) externas
+- Se usa paran compartir informacion
+
+- Por que se piensa que un servicio es mejor que un componente para compartir informacion?
+  - por que es "singlenton", por que hay una unica instancia del servicio
+    - Esa instancia se comparte a traves de la app,
+      - Si hay una informacion dentro la info que este contiene se comparte a traves de toda la app
+  - Un "COMPONENTE" tiene un ciclo de vida (engiandDestroy) es decir se destruye, y un "SERVICIO" que es un sigleton y es una unica instancia y es una unica instancia si se provee en toda la aplicacion.
+
+- Componente => Esta muy ligado a la URL, "cuando esta URL exista carga este componente" y si cambiamos una URL por otra el componente deja de existir y se borra la informacion del componente
+- Si se quiere guardar controlar un darkMode y la configuracion y que eliguio el usuario y demas Esta muy bien un servicio ya que es algo que esta en toda la aplicacion
+- (si se provee en el root de nuestra aplicacion )un servicio es injectable, se puede agregar en diferentes lugares cuando lo necesitemos
+- Y eso hace que este SINGLETON dependiendo del lugar donde se implemente es o no una unica instancia.
+
+<!-- DEV:COMMENT -> Servicio => ProvidedIn : 'root' => unica instancia para TODA la app -->
+- Esto es un servicio es una logica que podemos reutilizar en cualquier lugar
+```typeScript
+@injectable({
+  providedIn: 'root', // se aplica en toda la app, es para todo la aplicacion
+})
+// El authService al ser SINGLETON. cualquier entidad que cree el authService, angular pregunta(ya existe el authService?), ya que esto deveria estar en el root de la aplicacion, y la respuesta es si entonce se usa directamente la instancia que ya existe
+// No puede ser sttico pr que depende de un valor interno de la clase
+changeAuthentication(){
+  this.isAuthenticated = true;
+}
+// no se crea una nueva instancia, enotnces pregunta angular, esta authenticated? y si esta, lo guarda, entonces todos ya tienen este valor ya guardado
+export class  AuthService{
+  // S desde otro lugat oregunta  esta authenticated, te va a responder que si por que ya cambiaron el valor  y es la misma instancia
+  // login(){
+  // Cuando se pone estatic a un metodo quiere decir que no vas a utilizar nada de esa clase, no es necesario crear una instancia de la clase, se puede invocar a la clase y directamente al metodo AuthService.logi()
+  // este login si puede ser statico por que no depende de nadie
+  static login(){
+    console.log('Usuario no authenticated')
+    // podemos hacer una llamada http a algun lugar
+  }
+}
+// La direferencia entre estos 2 casos es que al de arriba hay que instanciarla
+// Sin static
+const authService = new AuthService();
+authService.login();
+// Con static
+// Se puede utilizar de esta manera sin crear la instancia de authService
+AuthService.login();
+
+// archivo cualqiera comparacion
+export const login= ()=>{
+    console.log('Usuario no authenticated')
+    // podemos hacer una llamada http a algun lugar
+  }
+
+```
+<!-- DEV:COMMENT -> Servicio => ProvidedIn : 'any' => En cualquier lugar se puede crear una instancia -->
+<!-- Se va a injectar en el módulo más cercano que lo solicite por primera vez
+  - si tubiera un componente con 3 componentes hijos y alguno de ellos lo llama y si alguien ya lo llamo mas arriba va a utilizar ese en vez del ultimo que lo llamo, va ser el mas cercano al cual se utilize,,, es optimo para quieremos optimizar la carga de los servicios cuando es un servicio muy pesado y demas
+  Carga esti siemore y cuando se utilize en un lugar proximo
 -->
+
+```typeScript
+@Injectable({
+  providedIn: 'any'
+})
+// Se va a utilizar cuando el serivicio se instancie de forma mas eficiente directamente y no se necesita un singleton para toda la aplicacion
+export class LogginService{
+  log(message: string){
+    console.log('log':, message);
+  }
+}
+
+//Por componente => va de la mano con Por componente, significa que es dar un servicio pero que directamente se va a utilizar en un componente especifico, y donde? se va a utilizar en ese y en sus hijos
+// Esto lo voy a utilizar cuando quiero que el servicio este disponible solo para este componente y sus hijos, creando un instancia unica y asilada el resto
+// Se puede hacer la logica de negocio y comunicacion externas puede hacer apartado de todo y se carga unicamente cuando se carge este componente que lo utiliza
+@Component({
+  selector: 'app-local',
+  template: `<p>Contenido del componente local</p>`,
+  // le decimos que utilice LocalService
+  providers : [LocalService]
+})
+export class LocalComponent {
+  // Aqi ya tenemos al servicio utilizandose
+  localService = inject(LocalService)
+}
+
+// Temas de poder intercambiar el uso de los providers
+// vamoos a crear un proveedor para esos Injectables, eso quiere decir que vamos a poder dependeiendo de quien lo llame, como lo llame, donde se llame cambiar la utilizacion de la misma
+@Injectable()
+// E un servicio que da data falsa
+// En vez de injectar esto --con
+export class MoskDataService {
+  getData(){
+    return 'mock data';
+  }
+}
+// injectamos esta clase --con
+@Injectable()
+export class RealDataService{
+  getData(){
+    return 'real data';
+  }
+}
+
+@Component({
+  standalone: true,
+  selector: 'app-root',
+  template: `<p>{{ data }}</p>`,
+  // y es asi como se puede puede agregar los proveedores
+  // un componente es un miniModulo
+  providers:[
+  // te voy a proveer MockFataService, pero utilizando RealDataService
+  // cuando quieras usar MockDataService en vez de instanciar un MockDataService vas a instanciar RealDataService, cambia uno por otro
+  // esto es usando useClas, pero que pasa si quiero utilizar un valor especifico
+  {provide: MockFataService, useClas: RealDataService}
+]
+})
+// No se usa mas el contructor en angualç 18, todo es inject, nisiquiera tengo que esperar que esto se "Construya" esto se injecta y directo se puede aplicar la data
+export class AppComponent{
+  dataService = inject(MockDataService)
+  data = this.dataService.getData();
+}
+
+
+// Cuando se trabaja por modulos
+@NgModule([
+  // podemos darle proveedores a los cuales se le puede cambiar su utilizacion
+  // todo esto si se aplica en un NgModulo asi se lo puede aplicar tambien asi en los "Components"
+providers:[
+  // te voy a proveer MockFataService, pero utilizando RealDataService
+  {provide: MockFataService, useClas: RealDataService}
+]
+])
+
+// DEV:COMMENT -> useValue
+// Esto anterior se puede hacer de vuelta pero para un valor especifico, si tengo un valor especifico
+// useValue
+const CONFIG = {  apiUrl:'https://api.example.com'} //reemplazo este --o
+@Component({
+  standalone: true,
+  selector: 'app-config',
+  template: `<p>API URL: {{ config.apiUrl }}</p>`,
+  providers: [
+    // Cuando querras utilizar CONFIG utiliza el valor de apiUrl
+    // por este CONFIG --O
+    {provide: ' CONFIG', useValue: {apiUrl:'https://api.rickandmorty.com' }}
+  ]
+})
+export class ConfigComponent {
+  constructor(@Inject('CONFIG') public config:{apiUrl:string}){}
+}
+
+// DEV:COMMENT -> useFactory
+
+@Injectable()
+export class DataService{
+  apiUrl: string = '';
+}
+
+// Factory - fabrica, dependiendo del valor de algo creamos un elemento con un valor u otro
+// export function dataServiceFactory(){
+export function dataServiceFactory(hostname: string){
+  // const apiUrl = window.location.hostname == 'localhost'
+  const apiUrl = hostname == 'localhost'
+  ? "'https://localhost:3000'"
+  : 'https://api.rickandmorty.com'
+
+  return new DataService(apiUrl);
+}
+
+// Aqui injectamos  dataServiceFactory
+@Component({
+  standalone: true,
+  selector: 'app-root',
+  template: `<p>{{ data }}</p>`,
+  // y es asi como se puede puede agregar los proveedores
+  // un componente es un miniModulo
+  providers:[
+  //  si vas a utilizar dataService que vas a hacer, vas a utilizar un useFactory
+  // y a dataServiceFactory podemos pasarle lo que quisieramos
+  // cuando quieras usar DataService vas a utilizar una fabrica esa fabrica se  llama cada vez que se quiere usar DataService
+  // dependiendo donde se este utilizando (si en el localhost o en una URL )vas a crear DataService con una data u otra
+  {provide: DataService, useFactory: dataServiceFactory}
+]
+})
+// No se usa mas el contructor en angular 18, todo es inject, nisiquiera tengo que esperar que esto se "Construya" esto se injecta y directo se puede aplicar la data
+export class AppComponent{
+  dataService = inject(DataService)
+  data = this.dataService.apiUrl();
+}
+
+// DEV:COMMENT -> useExisting ? utiliza el existente
+
+@Injectable()
+export class BaseService {
+  getData(){
+    return 'base data';
+  }
+}
+
+@Injectable()
+export class DerivedService {
+  baseService = injec(BaseService) //--constructor que va utilizar
+  getData(){
+    return this.baseService.getData() + '- derived';
+  }
+}
+
+@Component({
+  standalone: true,
+  selector: 'app-root',
+  template: `<p>{{data}}</p>`,
+  providers: [
+    BaseService,
+    // vas a utilizar tambien DerivedService utilizando el que ta existe por que ya lo injectamos el BaseService
+    // cuando DerivedService tenga que utilizar su constructor va utilizar el que ya tenemos , el que ya se instancio para este componente
+// Lo vamos a utilizar cuando querramos utilizar 2 tokens de injeccion y queremos que utilizen la misma instancia
+    // En este caso cuando utilicemos el DerivedService va utilizar la misma instancia de baseService ya existente en vez de crear una nueva
+    {provide: DerivedService, useExisting: BaseService }
+  ]
+})
+export class AppComponent{
+  derivedService = inject(DerivedService),
+  data: this.derivedService.getData(),
+}
+
+ ```
+
+
+
+
+
 
 
 ------------ Git
